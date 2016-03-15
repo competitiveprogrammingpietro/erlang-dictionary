@@ -1,12 +1,29 @@
+% Pietro Paolini - Birkbeck University
+% Programming Paradigms 2015/2016 Concurrent programming coursework
 -module(test).
--export([start/0, interact/2]).
+-export([start/0, 
+	 stop/0,
+	 insert/2,
+	 remove/1,
+	 lookup/1
+	]).
 
 start() ->
-    spawn (fun() -> startloop() end).
+    Pid = spawn (fun() -> startloop() end),
+    register(dictionary, Pid).
     
-interact(Pid, Request) ->
-    Pid ! {self(), Request},
-    receive 
+stop() ->
+    exit(whereis(dictionary), ok).
+
+insert(Key, Value) ->
+    dictionary ! {self(), {insert, Key, Value}}.
+
+remove(Key) ->
+    dictionary ! {self(), {remove, Key}}.
+
+lookup(Key) ->
+    dictionary ! {self(), {lookup, Key}},
+    receive
 	Response -> Response
     end.
 
@@ -17,16 +34,10 @@ startloop() ->
 loop(Table) ->
     receive
 	{From, {insert, Key, Value}} ->
-	    io:format("Here insert"),
-	    %TabList = ets:tab2list(Table),
-	    %lists:map(fun(X) -> io:format("Item : ~s", [X]) end, TabList),
-	    Return = ets:insert(Table, {Key, Value}),
-	    From ! Return,
+	    From ! ets:insert(Table, {Key, Value}),
 	    loop(Table);
 	{From, {lookup, Key}} ->
-	    io:format("Here lookup"),
-	    Return = ets:lookup(Table, Key),
-	    From ! Return,
+	    From ! ets:lookup(Table, Key),
 	    loop(Table);
 	{From, Any} ->
 	    From ! {self(), {error,Any}},
