@@ -24,7 +24,7 @@ remove(Key) ->
 lookup(Key) ->
     dictionary ! {self(), {lookup, Key}},
     receive
-	Response -> Response
+	{answer, Value} -> Value
     end.
 
 startloop() ->
@@ -37,7 +37,10 @@ loop(Table) ->
 	    From ! ets:insert(Table, {Key, Value}),
 	    loop(Table);
 	{From, {lookup, Key}} ->
-	    From ! ets:lookup(Table, Key),
+	    From ! {answer, ets:lookup(Table, Key)},
+	    loop(Table);
+	{From, {remove, Key}} ->
+	    From ! ets:delete(Table, Key),
 	    loop(Table);
 	{From, Any} ->
 	    From ! {self(), {error,Any}},
